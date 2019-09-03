@@ -1,0 +1,39 @@
+{
+  "name": "simpleswiper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "prettier:fix": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,scss}\"",
+    "test": "jest",
+    "dev": "parcel ./src/index.html"
+  },
+  "jest": {
+    "setupFilesAfterEnv": [
+      "./setupTests.js"
+    ],
+    "moduleNameMapper": {
+      "\\.css$": "<rootDir>/node_modules/jest-css-modules"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "parcel-bundler": "^1.12.3",
+    "react": "^16.9.0",
+    "react-dom": "^16.9.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.5.5",
+    "@babel/preset-env": "^7.5.5",
+    "@babel/preset-react": "^7.0.0",
+    "babel-jest": "^24.9.0",
+    "enzyme": "^3.10.0",
+    "enzyme-adapter-react-16": "^1.14.0",
+    "jest": "^24.9.0",
+    "jest-css-modules": "^2.1.0",
+    "postcss-modules": "^1.4.1",
+    "prettier": "1.18.2"
+  }
+}
