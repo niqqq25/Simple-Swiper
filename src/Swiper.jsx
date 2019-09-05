@@ -18,7 +18,10 @@ export default class Swiper extends React.Component {
     }
 
     componentDidUpdate({}, prevState) {
-        if(prevState.trackedItemIndex !== this.state.trackedItemIndex) {
+        if (
+            prevState.trackedItemIndex !== this.state.trackedItemIndex &&
+            !this.isTrackedItemIndexVisable()
+        ) {
             this.setLeftPageIndex(this.state.trackedItemIndex);
         }
     }
@@ -33,10 +36,16 @@ export default class Swiper extends React.Component {
     //same here
     setTrackedItemIndex(newTrackedItemIndex) {
         this.setState({
-            trackedItemIndex: this.normalizeTrackedItemIndex(
-                newTrackedItemIndex
-            ),
+            trackedItemIndex: this.normalizeTrackedItemIndex(newTrackedItemIndex),
         });
+    }
+
+    isTrackedItemIndexVisable() {
+        const { trackedItemIndex, leftPageIndex } = this.state;
+        const { visableItems } = this.props;
+        const rightPageIndex = leftPageIndex + Math.floor(visableItems) - 1;
+
+        return trackedItemIndex >= leftPageIndex && trackedItemIndex <= rightPageIndex;
     }
 
     isInfinite() {
@@ -77,13 +86,18 @@ export default class Swiper extends React.Component {
     normalizeLeftPageIndex(newLeftPageIndex) {
         const { visableItems, children, step } = this.props;
         const { leftPageIndex } = this.state;
-        const rightPageIndex = leftPageIndex + Math.ceil(visableItems) - 1;
+        const rightPageIndex = leftPageIndex + Math.floor(visableItems) - 1; //maybe make this as a function
         const lastPossibleLeftPageIndex = children.length - Math.floor(visableItems);
 
         //hotfix
-        //TODO later remake this so its stepsToMove should be 0 if trackedItemIndex is visable????
-        let stepsToMove = (newLeftPageIndex - leftPageIndex) / step;
-        stepsToMove = stepsToMove < 0 ? Math.floor(stepsToMove) : Math.ceil(stepsToMove);
+        let stepsToMove;
+        if (newLeftPageIndex > rightPageIndex) {
+            stepsToMove = (newLeftPageIndex - rightPageIndex) / step;
+        } else {
+            stepsToMove = (newLeftPageIndex - leftPageIndex) / step;
+        }
+        //arithmetic ceil
+        stepsToMove = Math.sign(stepsToMove) * Math.ceil(Math.abs(stepsToMove));
         //
 
         const movedLeftPageIndex = leftPageIndex + stepsToMove * step;
@@ -95,10 +109,7 @@ export default class Swiper extends React.Component {
                 return 0;
             }
         } else if (movedLeftPageIndex > lastPossibleLeftPageIndex) {
-            if (
-                this.isInfinite() &&
-                leftPageIndex === lastPossibleLeftPageIndex
-            ) {
+            if (this.isInfinite() && leftPageIndex === lastPossibleLeftPageIndex) {
                 return children.length; //change later
             } else {
                 return lastPossibleLeftPageIndex;
@@ -112,11 +123,7 @@ export default class Swiper extends React.Component {
         const { visableItems, children } = this.props;
 
         let items = children.map((child, index) => (
-            <li
-                key={index}
-                style={{ width: `${100 / visableItems}%` }}
-                className={styles.item}
-            >
+            <li key={index} style={{ width: `${100 / visableItems}%` }} className={styles.item}>
                 {child}
             </li>
         ));
@@ -138,16 +145,14 @@ export default class Swiper extends React.Component {
     }
 
     cloneItems({ items, key }) {
-        return items.map((item, index) =>
-            React.cloneElement(item, { key: key + index })
-        );
+        return items.map((item, index) => React.cloneElement(item, { key: key + index }));
     }
 
     moveRight() {
         const { step, moveTrackedItemIndex } = this.props;
         const { trackedItemIndex, leftPageIndex } = this.state;
 
-        if(moveTrackedItemIndex){
+        if (moveTrackedItemIndex) {
             this.setTrackedItemIndex(trackedItemIndex + step);
         } else {
             this.setLeftPageIndex(leftPageIndex + step);
@@ -158,7 +163,7 @@ export default class Swiper extends React.Component {
         const { step, moveTrackedItemIndex } = this.props;
         const { trackedItemIndex, leftPageIndex } = this.state;
 
-        if(moveTrackedItemIndex){
+        if (moveTrackedItemIndex) {
             this.setTrackedItemIndex(trackedItemIndex - step);
         } else {
             this.setLeftPageIndex(leftPageIndex - step);
@@ -168,10 +173,7 @@ export default class Swiper extends React.Component {
     render() {
         return (
             <div className={styles.wrapper}>
-                <ul
-                    className={styles.list}
-                    style={{ transform: this.getTransform() }}
-                >
+                <ul className={styles.list} style={{ transform: this.getTransform() }}>
                     {this.renderItems()}
                 </ul>
             </div>
