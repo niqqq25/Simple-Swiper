@@ -1,6 +1,8 @@
 import React from 'react';
 import styles from './styles/swiper.css';
+import { getStepsToMove, getRightPageIndex } from './swiperUtils';
 
+const TRANSITION = '250ms';
 //when enzyme will start supporting hooks, move to function component and start using hooks
 export default class Swiper extends React.Component {
     constructor(props) {
@@ -8,7 +10,10 @@ export default class Swiper extends React.Component {
         this.state = {
             leftPageIndex: this.props.trackedItemIndex,
             trackedItemIndex: this.props.trackedItemIndex,
+            transition: true,
         };
+
+        this.onTransitionEnd = this.onTransitionEnd.bind(this);
     }
 
     UNSAFE_componentWillReceiveProps(prevProps) {
@@ -40,10 +45,26 @@ export default class Swiper extends React.Component {
         });
     }
 
+    enableTransition() {
+        if (!this.state.transition) {
+            this.setState({
+                transition: true,
+            });
+        }
+    }
+
+    disableTransition() {
+        if (this.state.transition) {
+            this.setState({
+                transition: false,
+            });
+        }
+    }
+
     isTrackedItemIndexVisable() {
         const { trackedItemIndex, leftPageIndex } = this.state;
         const { visableItems } = this.props;
-        const rightPageIndex = leftPageIndex + Math.floor(visableItems) - 1;
+        const rightPageIndex = getRightPageIndex({ leftPageIndex, visableItems });
 
         return trackedItemIndex >= leftPageIndex && trackedItemIndex <= rightPageIndex;
     }
@@ -62,7 +83,7 @@ export default class Swiper extends React.Component {
     }
 
     normalizeTrackedItemIndex(newTrackedItemIndex) {
-        //maybe possible to move into swiper utils
+        const { trackedItemIndex } = this.state;
         const lastItemIndex = this.props.children.length - 1;
 
         if (newTrackedItemIndex > lastItemIndex) {
@@ -83,24 +104,36 @@ export default class Swiper extends React.Component {
         return newTrackedItemIndex;
     }
 
+    //Refactor this mess
     normalizeLeftPageIndex(newLeftPageIndex) {
         const { visableItems, children, step } = this.props;
-        const { leftPageIndex } = this.state;
-        const rightPageIndex = leftPageIndex + Math.floor(visableItems) - 1; //maybe make this as a function
+        const { leftPageIndex, transition } = this.state;
         const lastPossibleLeftPageIndex = children.length - Math.floor(visableItems);
+        const moveToStartClone =
+            this.isInfinite() && leftPageIndex === 0 && newLeftPageIndex === children.length - 1;
+        const moveToEndClone =
+            this.isInfinite() &&
+            leftPageIndex === lastPossibleLeftPageIndex &&
+            newLeftPageIndex === 0;
 
-        //hotfix
-        let stepsToMove;
-        if (newLeftPageIndex > rightPageIndex) {
-            stepsToMove = (newLeftPageIndex - rightPageIndex) / step;
-        } else {
-            stepsToMove = (newLeftPageIndex - leftPageIndex) / step;
-        }
-        //arithmetic ceil
-        stepsToMove = Math.sign(stepsToMove) * Math.ceil(Math.abs(stepsToMove));
-        //
-
+        const stepsToMove = getStepsToMove({ leftPageIndex, newLeftPageIndex, visableItems, step });
         const movedLeftPageIndex = leftPageIndex + stepsToMove * step;
+
+        //manage transition
+        if (transition) {
+            this.enableTransition();
+        }
+        //TODO later add ability to disable transition forever
+
+        //manage exceptions
+        //ugly fix to prevent exception firing when it has less or 2 pages
+        //TODO improve detection 
+        if (moveToEndClone && Math.ceil(children.length / Math.floor(visableItems)) > 2) {
+            return children.length;
+        } else if (moveToStartClone && Math.ceil(children.length / Math.floor(visableItems)) > 2) {
+            return -Math.floor(visableItems);
+        }
+        //
 
         if (movedLeftPageIndex < 0) {
             if (this.isInfinite() && leftPageIndex === 0) {
@@ -117,6 +150,25 @@ export default class Swiper extends React.Component {
         }
 
         return movedLeftPageIndex;
+    }
+
+    onTransitionEnd() {
+        const { leftPageIndex } = this.state;
+        const itemCount = this.props.children.length;
+        const lastTrackedItemIndex = itemCount - 1;
+        this.disableTransition();
+
+        if (leftPageIndex < 0) {
+            //unfortunately 'setLeftPageIndex' can not be used due to
+            //'normalizeLeftPageIndex' built in inside it
+            this.setState({
+                leftPageIndex: leftPageIndex + itemCount,
+            });
+        } else if (leftPageIndex > lastTrackedItemIndex) {
+            this.setState({
+                leftPageIndex: leftPageIndex - itemCount,
+            });
+        }
     }
 
     renderItems() {
@@ -171,9 +223,14 @@ export default class Swiper extends React.Component {
     }
 
     render() {
+        const style = {
+            transform: this.getTransform(),
+            transition: this.state.transition ? TRANSITION : '',
+        };
+        //onTransitionEnd={this.onTransitionEnd}
         return (
             <div className={styles.wrapper}>
-                <ul className={styles.list} style={{ transform: this.getTransform() }}>
+                <ul className={styles.list} style={style}>
                     {this.renderItems()}
                 </ul>
             </div>
