@@ -8,7 +8,7 @@
     /* TODO: later make so u can choose width with height without changing something in component */
     height: 100%;
     width: 150px;
-    margin: 100px 0 0 200px;
+    margin: 100px 0 0 300px;
     overflow: visible;
     border: 1px solid black;
 }

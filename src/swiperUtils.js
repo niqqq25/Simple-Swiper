@@ -14,3 +14,12 @@ export function getStepsToMove({ leftPageIndex, newLeftPageIndex, visableItems, 
 export function getRightPageIndex({ leftPageIndex, visableItems }) {
     return leftPageIndex + Math.floor(visableItems) - 1;
 }
+
+export function normalizeIndex(index, itemCount) {
+    if(index < 0) {
+        return normalizeIndex(index + itemCount, itemCount);
+    } else if(index > itemCount - 1){
+        return normalizeIndex(index - itemCount, itemCount);
+    }
+    return index;
+}
